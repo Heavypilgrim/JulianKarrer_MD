@@ -26,7 +26,7 @@ type ForceT = Vec<Vector3<f64>>;
 type MassT = Vec<f64>;
 
 // Define constants
-/// The Boltzmann constant defined in terms of Kelvin and electron Volts
+/// The Boltzmann constant defined in terms of Kelvin a nd electron Volts
 const KB_EV: f64 = 8.617333262e-5;
 
 /// Structure that holds buffers for the positions, velocities, forces, masses etc. of all atoms.
@@ -297,41 +297,54 @@ fn run_timed(nb_atoms: usize, direct: bool) -> f64 {
 }
 
 fn main() {
-    let mut file: BufWriter<File> = BufWriter::new(
-        OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open("runtimes_ts_par.csv")
-            .unwrap(),
-    );
-    // write csv header
-    write!(file, "direct summation or ljts,number of atoms,average runtime,minimum runtime,maximum runtime,corrected sample standard deviation\n").unwrap();
 
-    for direct in [false, true] {
-        for n in (2.max(NB_ATOMS_STEP)..=NB_ATOMS_MAX).step_by(NB_ATOMS_STEP) {
-            // get runtime data
-            println!("Running with {} atoms", n);
-            let runs: Vec<f64> = (0..NB_RUNS).map(|_| run_timed(n, direct)).collect();
-            // calculate statistical data to write to csv
-            let average = runs.iter().sum::<f64>() / (NB_RUNS as f64);
-            let min = runs.iter().min_by(|x, y| x.total_cmp(y)).unwrap();
-            let max = runs.iter().max_by(|x, y| x.total_cmp(y)).unwrap();
-            let stddev = (runs.iter().map(|val| (val - average).powi(2)).sum::<f64>()
-                / (NB_RUNS as f64 - 1.))
-                .sqrt();
-            // write data to csv
-            writeln!(
-                file,
-                "{},{},{},{},{},{}",
-                if direct { "direct" } else { "ljts" },
-                n,
-                average,
-                min,
-                max,
-                stddev
-            )
-            .unwrap();
-        }
+    let nb_atoms = 500;
+    const NB_RUNS: i32 = 100;
+    let mut elapsed: f64 = 0.0;
+    for _ in 0..NB_RUNS{
+        let mut atoms = Atoms::new(nb_atoms,SIGMA);
+        let start = Instant::now();
+        atoms.lj_direct_sum(EPSILON, SIGMA);
+        elapsed += start.elapsed().as_micros() as f64;
     }
+    elapsed /= NB_RUNS as f64;
+    println!("{} atoms processed; average elapsed microseconds(of {} runs): {}",nb_atoms, NB_RUNS, elapsed);
+//------------------------------------------------------------------------------------------------------    
+//    let mut file: BufWriter<File> = BufWriter::new(
+//        OpenOptions::new()
+//            .write(true)
+//            .create(true)
+//            .truncate(true)
+//            .open("runtimes_ts_par.csv")
+//            .unwrap(),
+//    );
+//    // write csv header
+//    write!(file, "direct summation or ljts,number of atoms,average runtime,minimum runtime,maximum runtime,corrected sample standard deviation\n").unwrap();
+//
+//    for direct in [false, true] {
+//        for n in (2.max(NB_ATOMS_STEP)..=NB_ATOMS_MAX).step_by(NB_ATOMS_STEP) {
+//            // get runtime data
+//            println!("Running with {} atoms", n);
+//            let runs: Vec<f64> = (0..NB_RUNS).map(|_| run_timed(n, direct)).collect();
+//            // calculate statistical data to write to csv
+//            let average = runs.iter().sum::<f64>() / (NB_RUNS as f64);
+//            let min = runs.iter().min_by(|x, y| x.total_cmp(y)).unwrap();
+//            let max = runs.iter().max_by(|x, y| x.total_cmp(y)).unwrap();
+//            let stddev = (runs.iter().map(|val| (val - average).powi(2)).sum::<f64>()
+//                / (NB_RUNS as f64 - 1.))
+//                .sqrt();
+//            // write data to csv
+//            writeln!(
+//                file,
+//                "{},{},{},{},{},{}",
+//                if direct { "direct" } else { "ljts" },
+//                n,
+//                average,
+//                min,
+//                max,
+//                stddev
+//            )
+//            .unwrap();
+//        }
+//    }
 }
